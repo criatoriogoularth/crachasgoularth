@@ -155,12 +155,19 @@ table.lista-aves tr:hover td{background:rgba(199,151,63,.05);}
    IMPRESSÃO
    ========================================================================= */
 @media print{
-  *{ -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; color-adjust:exact !important; }
   body{background:#fff !important;padding:0;margin:0;}
   .no-print{display:none !important;}
-  .wrap{max-width:none;}
+  .wrap{max-width:none;background:none !important;}
+  .card{background:none !important;border:none !important;box-shadow:none !important;padding:0 !important;border-radius:0 !important;}
   #area-impressao{padding:0;}
   .badge-cracha{box-shadow:none;}
+  /* só o crachá em si precisa forçar a impressão de cor/fundo — o resto da
+     página (cartões, fundo escuro do editor) fica sempre em branco na folha */
+  .badge-cracha, .badge-cracha *{
+    -webkit-print-color-adjust:exact !important;
+    print-color-adjust:exact !important;
+    color-adjust:exact !important;
+  }
 }
 </style>
 <style id="estilo-dinamico-folha"></style>
@@ -183,15 +190,15 @@ table.lista-aves tr:hover td{background:rgba(199,151,63,.05);}
     <div class="grid3">
       <div class="field">
         <label class="field-label">Nome do criador</label>
-        <input type="text" id="cr-nome" placeholder="Ex: Fábio Alves Goulart">
+        <input type="text" id="cr-nome" placeholder="Ex: Criatório Goularth">
       </div>
       <div class="field">
         <label class="field-label">Registro (SISPASS / FOB etc.)</label>
-        <input type="text" id="cr-registro" placeholder="Ex: 3348370 / FOB II.889">
+        <input type="text" id="cr-registro" placeholder="Ex: 000000 / FOB 000">
       </div>
       <div class="field">
         <label class="field-label">Telefone</label>
-        <input type="text" id="cr-telefone" placeholder="Ex: (11) 94149-3657">
+        <input type="text" id="cr-telefone" placeholder="Ex: 00 00000-0000">
       </div>
     </div>
   </section>
