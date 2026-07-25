@@ -155,15 +155,15 @@ table.lista-aves tr:hover td{background:rgba(199,151,63,.05);}
    IMPRESSÃO
    ========================================================================= */
 @media print{
+  *{ -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; color-adjust:exact !important; }
   body{background:#fff !important;padding:0;margin:0;}
   .no-print{display:none !important;}
   .wrap{max-width:none;}
-  #area-impressao{display:grid;grid-template-columns:repeat(2,90mm);gap:4mm 8mm;padding:0;}
+  #area-impressao{padding:0;}
   .badge-cracha{box-shadow:none;}
-  .badge-cracha:nth-child(8n){page-break-after:always;}
-  @page{size:A4;margin:10mm;}
 }
 </style>
+<style id="estilo-dinamico-folha"></style>
 </head>
 <body>
 <div class="wrap">
@@ -286,7 +286,20 @@ table.lista-aves tr:hover td{background:rgba(199,151,63,.05);}
       <h2 class="section-title" style="margin:0;"><span class="n">5</span> Prévia dos crachás selecionados</h2>
       <button class="btn btn-primary" onclick="imprimirCrachas()">🖨️ Imprimir / Gerar PDF</button>
     </div>
-    <div class="helptext no-print" style="margin-bottom:10px;">Até 8 crachás por folha (2 colunas × 4 linhas), com espaço entre a coluna da esquerda e a da direita. Ao imprimir, escolha "Salvar como PDF" na janela de impressão do navegador.</div>
+
+    <div class="config-group no-print">
+      <div class="titulo-grupo">📐 Tamanho do crachá e da folha</div>
+      <div class="linha-controles">
+        <div class="mini-campo"><label>Largura (mm)</label><input type="number" id="folha-largura" value="90" min="30" max="120" step="1" onchange="lerConfigFolha()"></div>
+        <div class="mini-campo"><label>Altura (mm)</label><input type="number" id="folha-altura" value="58" min="25" max="100" step="1" onchange="lerConfigFolha()"></div>
+        <div class="mini-campo"><label>Espaço entre eles (mm)</label><input type="number" id="folha-espaco" value="2" min="0" max="15" step="0.5" onchange="lerConfigFolha()"></div>
+        <div class="mini-campo"><label>Margem da folha (mm)</label><input type="number" id="folha-margem" value="8" min="0" max="20" step="1" onchange="lerConfigFolha()"></div>
+        <div></div><div></div>
+      </div>
+      <div class="helptext" id="folha-info" style="margin-top:6px;"></div>
+    </div>
+
+    <div class="helptext no-print" style="margin-bottom:10px;">Ao imprimir, escolha "Salvar como PDF" na janela de impressão do navegador e confira se a opção "Imagens/gráficos de segundo plano" está marcada, pra garantir que as cores saiam.</div>
     <div id="area-impressao"></div>
   </section>
 
@@ -362,6 +375,10 @@ let configs = {
 };
 let presetAtivo = { M:'verde-aviario', F:'rose-elegante', I:'minimalista' };
 
+/* Tamanho do crachá e da folha de impressão — é global (vale pra todo mundo,
+   macho ou fêmea), diferente das configurações de cor/fonte que são por sexo. */
+let folha = { largura:90, altura:58, espaco:2, margem:8 };
+
 /* =========================================================================
    PERSISTÊNCIA NO NAVEGADOR (localStorage)
    Cada visitante guarda os próprios dados só no aparelho dele — não existe
@@ -428,7 +445,7 @@ function imprimirCrachas(){
 
 function salvarEstado(){
   try {
-    const pacote = { versao:2, salvoEm:new Date().toISOString(), criador, aves, configs, presetAtivo };
+    const pacote = { versao:2, salvoEm:new Date().toISOString(), criador, aves, configs, presetAtivo, folha };
     window.localStorage.setItem(CHAVE_STORAGE, JSON.stringify(pacote));
   } catch (err){
     console.warn('Não foi possível salvar automaticamente neste navegador:', err);
@@ -445,6 +462,7 @@ function carregarEstadoSalvo(){
     criador = pacote.criador || criador;
     if (pacote.configs) configs = pacote.configs;
     if (pacote.presetAtivo) presetAtivo = pacote.presetAtivo;
+    if (pacote.folha) folha = pacote.folha;
     return true;
   } catch (err){
     console.warn('Não foi possível carregar dados salvos deste navegador:', err);
@@ -743,6 +761,39 @@ function aoDigitarIniciaisLogo(){
   lerFormularioConfig();
 }
 
+function lerConfigFolha(){
+  folha.largura = parseFloat(document.getElementById('folha-largura').value) || 90;
+  folha.altura = parseFloat(document.getElementById('folha-altura').value) || 58;
+  folha.espaco = parseFloat(document.getElementById('folha-espaco').value) || 0;
+  folha.margem = parseFloat(document.getElementById('folha-margem').value) || 0;
+  atualizarEstiloFolha();
+  salvarEstado();
+}
+
+function calcularBadgesPorPagina(){
+  const A4_LARGURA = 210, A4_ALTURA = 297;
+  const larguraUtil = Math.max(0, A4_LARGURA - 2 * folha.margem);
+  const alturaUtil = Math.max(0, A4_ALTURA - 2 * folha.margem);
+  const colunas = Math.max(1, Math.floor((larguraUtil + folha.espaco) / (folha.largura + folha.espaco)));
+  const linhas = Math.max(1, Math.floor((alturaUtil + folha.espaco) / (folha.altura + folha.espaco)));
+  return { colunas, linhas, total: colunas * linhas };
+}
+
+function atualizarEstiloFolha(){
+  const { colunas, linhas, total } = calcularBadgesPorPagina();
+  const estilo = document.getElementById('estilo-dinamico-folha');
+  estilo.textContent = `
+    #area-impressao{ grid-template-columns:repeat(${colunas}, ${folha.largura}mm); gap:${folha.espaco}mm; }
+    .badge-cracha{ width:${folha.largura}mm; height:${folha.altura}mm; }
+    @media print{
+      .badge-cracha:nth-child(${total}n){ page-break-after:always; }
+      @page{ size:A4; margin:${folha.margem}mm; }
+    }
+  `;
+  const info = document.getElementById('folha-info');
+  if (info) info.textContent = `Cabem ${total} crachás por folha (${colunas} coluna${colunas===1?'':'s'} × ${linhas} linha${linhas===1?'':'s'}).`;
+}
+
 function lerFormularioConfig(){
   const c = configs[sexoEditando];
   c.fundoCor = document.getElementById('cfg-fundo-cor').value;
@@ -1026,6 +1077,11 @@ if (tinhaDadosSalvos){
   document.getElementById('cr-registro').value = criador.registro || '';
   document.getElementById('cr-telefone').value = criador.telefone || '';
 }
+document.getElementById('folha-largura').value = folha.largura;
+document.getElementById('folha-altura').value = folha.altura;
+document.getElementById('folha-espaco').value = folha.espaco;
+document.getElementById('folha-margem').value = folha.margem;
+atualizarEstiloFolha();
 montarPresets();
 montarGruposConfig();
 renderLista();
